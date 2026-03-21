@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::io::Read;
+use std::io::Read as IoRead;
 use std::process::Command;
 
 // Discord-inspired ANSI colors
@@ -72,9 +72,9 @@ fn format_ctx_size(size: Option<u64>) -> String {
     }
 }
 
-fn git_branch(cwd: &str) -> String {
+fn try_git(args: &[&str], cwd: &str) -> Option<String> {
     Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .args(args)
         .current_dir(cwd)
         .stderr(std::process::Stdio::null())
         .output()
@@ -89,18 +89,46 @@ fn git_branch(cwd: &str) -> String {
                 None
             }
         })
-        .unwrap_or_else(|| "-".to_string())
+}
+
+fn git_branch(cwd: &str) -> String {
+    // --no-optional-locks prevents git from failing or blocking when
+    // .git/HEAD.lock is held during a branch switch (especially on Windows).
+    try_git(
+        &["--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd,
+    )
+    // Fallback: symbolic-ref works even when rev-parse is mid-transition.
+    .or_else(|| {
+        try_git(
+            &["--no-optional-locks", "symbolic-ref", "--short", "HEAD"],
+            cwd,
+        )
+    })
+    // Last resort: detached HEAD state — show short commit hash.
+    .or_else(|| {
+        try_git(
+            &["--no-optional-locks", "rev-parse", "--short", "HEAD"],
+            cwd,
+        )
+        .map(|h| format!("({})", h))
+    })
+    .unwrap_or_else(|| "-".to_string())
 }
 
 fn main() {
     let mut buf = String::new();
     if std::io::stdin().read_to_string(&mut buf).is_err() {
+        eprint!("[statusline] stdin read failed");
         return;
     }
 
     let d: Input = match serde_json::from_str(&buf) {
         Ok(v) => v,
-        Err(_) => return,
+        Err(_) => {
+            print!("{BOLD}{BLURPLE}Opti{RESET}{DIM} | {RESET}{GRAY}starting...{RESET}");
+            return;
+        }
     };
 
     let raw_name = d
