@@ -1,3 +1,4 @@
+use chrono::{Local, TimeZone};
 use serde::Deserialize;
 use std::io::Read as IoRead;
 use std::process::Command;
@@ -40,6 +41,7 @@ struct RateLimits {
 #[derive(Deserialize)]
 struct RateLimit {
     used_percentage: Option<f64>,
+    resets_at: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -75,6 +77,28 @@ fn pct_str(v: Option<f64>) -> String {
     match v {
         Some(v) => format!("{:.0}%", v),
         None => "?%".to_string(),
+    }
+}
+
+fn format_reset_time(ts: Option<i64>) -> String {
+    match ts {
+        Some(t) => Local
+            .timestamp_opt(t, 0)
+            .single()
+            .map(|dt| dt.format("%H:%M").to_string())
+            .unwrap_or_else(|| "?".to_string()),
+        None => "?".to_string(),
+    }
+}
+
+fn format_reset_date(ts: Option<i64>) -> String {
+    match ts {
+        Some(t) => Local
+            .timestamp_opt(t, 0)
+            .single()
+            .map(|dt| dt.format("%m/%d").to_string())
+            .unwrap_or_else(|| "?".to_string()),
+        None => "?".to_string(),
     }
 }
 
@@ -163,16 +187,12 @@ fn main() {
     };
 
     let ctx = d.context_window.as_ref().and_then(|c| c.used_percentage);
-    let s5h = d
-        .rate_limits
-        .as_ref()
-        .and_then(|r| r.five_hour.as_ref())
-        .and_then(|r| r.used_percentage);
-    let s7d = d
-        .rate_limits
-        .as_ref()
-        .and_then(|r| r.seven_day.as_ref())
-        .and_then(|r| r.used_percentage);
+    let rl5h = d.rate_limits.as_ref().and_then(|r| r.five_hour.as_ref());
+    let s5h = rl5h.and_then(|r| r.used_percentage);
+    let r5h = format_reset_time(rl5h.and_then(|r| r.resets_at));
+    let rl7d = d.rate_limits.as_ref().and_then(|r| r.seven_day.as_ref());
+    let s7d = rl7d.and_then(|r| r.used_percentage);
+    let r7d = format_reset_date(rl7d.and_then(|r| r.resets_at));
     let branch = d
         .workspace
         .as_ref()
@@ -183,10 +203,11 @@ fn main() {
     let effort = read_effort_level().unwrap_or_else(|| "?".to_string());
     let sep = format!("{DIM} | {RESET}");
     print!(
-        "{BOLD}{BLURPLE}{model}{RESET} {DIM}[{effort}]{RESET}{sep}\
+        "{BOLD}{BLURPLE}{model}{RESET} {DIM}{GRAY}{effort}{RESET}{sep}\
+         {BLURPLE}{branch}{RESET}\n\
          {GRAY}CTX:{RESET}{c1}{v1}{RESET}{sep}\
-         {GRAY}5h:{RESET}{c2}{v2}{RESET} {GRAY}7d:{RESET}{c3}{v3}{RESET}{sep}\
-         {BLURPLE}{branch}{RESET}",
+         {GRAY}5h:{RESET}{c2}{v2}{RESET}{DIM} ({r5h}){RESET}{sep}\
+         {GRAY}7d:{RESET}{c3}{v3}{RESET}{DIM} ({r7d}){RESET}",
         c1 = pct_color(ctx),
         v1 = pct_str(ctx),
         c2 = pct_color(s5h),
