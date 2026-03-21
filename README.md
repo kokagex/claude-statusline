@@ -18,30 +18,7 @@ Rust で書いた Claude Code 用のシンプルなカスタム statusline。
 
 ## インストール
 
-```bash
-git clone git@github.com:kokagex/claude-statusline.git ~/.claude/statusline-rs
-cd ~/.claude/statusline-rs
-bash setup.sh
-```
-
-`setup.sh` がビルドして `~/.claude/settings.json` に statusline コマンドを自動登録します。
-
-## 手動セットアップ
-
-```bash
-cargo build --release
-```
-
-`~/.claude/settings.json` に以下を追加:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "/path/to/.claude/statusline-rs/target/release/statusline"
-  }
-}
-```
+この README を Claude Code に読み込ませて「このstatuslineをインストールして」と伝えるだけです。
 
 ## 要件
 
