@@ -159,12 +159,12 @@ fn main() {
         .as_ref()
         .and_then(|r| r.seven_day.as_ref())
         .and_then(|r| r.used_percentage);
-    let cwd = d
+    let branch = d
         .workspace
         .as_ref()
         .and_then(|w| w.project_dir.as_deref().or(w.current_dir.as_deref()))
-        .unwrap_or(".");
-    let branch = git_branch(cwd);
+        .map(|cwd| git_branch(cwd))
+        .unwrap_or_else(|| "-".to_string());
 
     let sep = format!("{DIM} | {RESET}");
     print!(
