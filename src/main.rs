@@ -27,7 +27,7 @@ struct Model {
 
 #[derive(Deserialize)]
 struct ContextWindow {
-    used_percentage: Option<u8>,
+    used_percentage: Option<f64>,
     context_window_size: Option<u64>,
 }
 
@@ -39,7 +39,7 @@ struct RateLimits {
 
 #[derive(Deserialize)]
 struct RateLimit {
-    used_percentage: Option<u8>,
+    used_percentage: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -48,18 +48,18 @@ struct Workspace {
     project_dir: Option<String>,
 }
 
-fn pct_color(v: Option<u8>) -> &'static str {
+fn pct_color(v: Option<f64>) -> &'static str {
     match v {
         None => GRAY,
-        Some(v) if v < 50 => GREEN,
-        Some(v) if v < 80 => YELLOW,
+        Some(v) if v < 50.0 => GREEN,
+        Some(v) if v < 80.0 => YELLOW,
         _ => RED,
     }
 }
 
-fn pct_str(v: Option<u8>) -> String {
+fn pct_str(v: Option<f64>) -> String {
     match v {
-        Some(v) => format!("{v}%"),
+        Some(v) => format!("{:.0}%", v),
         None => "?%".to_string(),
     }
 }
