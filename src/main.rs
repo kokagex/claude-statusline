@@ -50,20 +50,6 @@ struct Workspace {
     project_dir: Option<String>,
 }
 
-fn read_effort_level() -> Option<String> {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .ok()?;
-    let path = std::path::Path::new(&home)
-        .join(".claude")
-        .join("settings.json");
-    let content = std::fs::read_to_string(path).ok()?;
-    let v: serde_json::Value = serde_json::from_str(&content).ok()?;
-    v.get("effortLevel")
-        .and_then(|e| e.as_str())
-        .map(|s| s.to_string())
-}
-
 fn pct_color(v: Option<f64>) -> &'static str {
     match v {
         None => GRAY,
@@ -200,10 +186,9 @@ fn main() {
         .map(|cwd| git_branch(cwd))
         .unwrap_or_else(|| "-".to_string());
 
-    let effort = read_effort_level().unwrap_or_else(|| "?".to_string());
     let sep = format!("{DIM} | {RESET}");
     print!(
-        "{BOLD}{BLURPLE}{model}{RESET} {DIM}{GRAY}{effort}{RESET}{sep}\
+        "{BOLD}{BLURPLE}{model}{RESET}{sep}\
          {BLURPLE}{branch}{RESET}\n\
          {GRAY}CTX:{RESET}{c1}{v1}{RESET}{sep}\
          {GRAY}5h:{RESET}{c2}{v2}{RESET}{DIM} ({r5h}){RESET}{sep}\
