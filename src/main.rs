@@ -160,7 +160,9 @@ fn main() {
         .as_ref()
         .and_then(|m| m.display_name.as_deref())
         .unwrap_or("?");
-    let short_name = raw_name.split(' ').next().unwrap_or(raw_name);
+    // Use the full display name so model changes (e.g. Sonnet vs Opus) are visible.
+    // Strip the leading "Claude " prefix to save space while keeping the version/variant.
+    let short_name = raw_name.strip_prefix("Claude ").unwrap_or(raw_name);
     let ctx_label = format_ctx_size(
         d.context_window
             .as_ref()
