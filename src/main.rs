@@ -163,11 +163,18 @@ fn main() {
     // Use the full display name so model changes (e.g. Sonnet vs Opus) are visible.
     // Strip the leading "Claude " prefix to save space while keeping the version/variant.
     let short_name = raw_name.strip_prefix("Claude ").unwrap_or(raw_name);
-    let ctx_label = format_ctx_size(
-        d.context_window
-            .as_ref()
-            .and_then(|c| c.context_window_size),
-    );
+    // Skip ctx_label if display_name already contains a context size hint (e.g. "1M context")
+    let has_ctx_in_name =
+        short_name.contains("1M") || short_name.contains("200K") || short_name.contains("128K");
+    let ctx_label = if has_ctx_in_name {
+        String::new()
+    } else {
+        format_ctx_size(
+            d.context_window
+                .as_ref()
+                .and_then(|c| c.context_window_size),
+        )
+    };
     let model = if ctx_label.is_empty() {
         short_name.to_string()
     } else {
@@ -188,10 +195,20 @@ fn main() {
         .map(|cwd| git_branch(cwd))
         .unwrap_or_else(|| "-".to_string());
 
+    let branch_icon = if branch == "main" || branch == "master" {
+        "\u{2302} " // ⌂
+    } else if branch.starts_with("feature/") || branch.starts_with("feature-") {
+        "\u{2726} " // ✦
+    } else if branch.starts_with("bugfix/") || branch.starts_with("fix/") {
+        "\u{26CF} " // ⛏
+    } else {
+        ""
+    };
+
     let sep = format!("{DIM} | {RESET}");
     print!(
         "{BOLD}{BLURPLE}{model}{RESET}{sep}\
-         {BLURPLE}{branch}{RESET}\n\
+         {branch_icon}{BLURPLE}{branch}{RESET}\n\
          {GRAY}CTX:{RESET}{c1}{v1}{RESET}{sep}\
          {GRAY}5h:{RESET}{c2}{v2}{RESET}{DIM} ({r5h}){RESET}{sep}\
          {GRAY}7d:{RESET}{c3}{v3}{RESET}{DIM} ({r7d}){RESET}",
